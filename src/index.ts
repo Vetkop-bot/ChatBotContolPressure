@@ -14,18 +14,38 @@ const bot = new Telegraf(token);
 
 setupBotCommands(bot);
 
-// Временно отключаем обработку сообщений с показаниями
+function parseThreeNumbers(text: string): { systolic: number; diastolic: number; pulse: number } | null {
+    const cleaned = text.replace(/[,;:\/]/g, ' ');
+    const parts = cleaned.trim().split(/\s+/).filter(p => p.length > 0);
+    if (parts.length < 3) return null;
+    const nums = parts.slice(0, 3).map(Number);
+    if (nums.some(isNaN)) return null;
+    const [systolic, diastolic, pulse] = nums;
+    if (systolic <= 0 || diastolic <= 0 || pulse <= 0 || systolic > 300 || diastolic > 200 || pulse > 250) return null;
+    return { systolic, diastolic, pulse };
+}
 bot.on('text', async (ctx) => {
-    if (ctx.message.text.startsWith('/')) return;
-    await ctx.reply(
-        ' Функция анализа давления временно отключена для упрощения запуска.\n' ,
-    );
-});
+    const messageText = ctx.message.text;
+    const userId = ctx.from.id;
+    const username = ctx.from.username || 'без username';
 
-bot.on('photo', async (ctx) => {
-    await ctx.reply(
-        ' Функция распознавания фото временно отключена.\n',
-    );
+    console.log(`[${new Date().toISOString()}] Получено сообщение от ${username} (${userId}): "${messageText}"`);
+
+    if (messageText.startsWith('/')) return;
+
+    const numbers = parseThreeNumbers(messageText);
+    if (numbers) {
+        const { systolic, diastolic, pulse } = numbers;
+        const reply = `Распознано:\nСистола: ${systolic}\nДиастола: ${diastolic}\nПульс: ${pulse}\n`;
+        await ctx.reply(reply);
+    } else {
+        await ctx.reply(
+            'Не удалось распознать три числа.\n' +
+            'Убедитесь, что вы отправили систолу, диастолу и пульс через пробел, запятую или слеш.\n' +
+            'Пример: `120 80 75`',
+            { parse_mode: 'Markdown' }
+        );
+    }
 });
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
