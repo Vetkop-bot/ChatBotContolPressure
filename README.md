@@ -26,6 +26,6 @@ cd ChatBotContolPressure
 ### Установи зависимости
 npm install
 ### Создай файл .env в корне проекта
-BOT_TOKEN=8919814493:AAEeawILjaQDDEFpmeOi5VgQCt5uWofBjgk
+BOT_TOKEN= 
 ### Запусти в режиме разработки
 npm run dev
