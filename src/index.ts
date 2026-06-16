@@ -1,6 +1,9 @@
 import { Telegraf } from 'telegraf';
 import dotenv from 'dotenv';
 import { setupBotCommands } from './bot';
+import { photoHandler } from './handlers/photoHandler';
+import {saveMeasurement} from "./services/measurementService";
+
 
 dotenv.config();
 
@@ -24,6 +27,7 @@ function parseThreeNumbers(text: string): { systolic: number; diastolic: number;
     if (systolic <= 0 || diastolic <= 0 || pulse <= 0 || systolic > 300 || diastolic > 200 || pulse > 250) return null;
     return { systolic, diastolic, pulse };
 }
+bot.on('photo', photoHandler);
 bot.on('text', async (ctx) => {
     const messageText = ctx.message.text;
     const userId = ctx.from.id;
@@ -33,11 +37,21 @@ bot.on('text', async (ctx) => {
 
     if (messageText.startsWith('/')) return;
 
-    const numbers = parseThreeNumbers(messageText);
-    if (numbers) {
-        const { systolic, diastolic, pulse } = numbers;
-        const reply = `Распознано:\nСистола: ${systolic}\nДиастола: ${diastolic}\nПульс: ${pulse}\n`;
-        await ctx.reply(reply);
+    const parsed = parseThreeNumbers(messageText);
+    if (parsed) {
+        const { systolic, diastolic, pulse } = parsed;
+        try {
+            await saveMeasurement(userId, systolic, diastolic, pulse);
+            await ctx.reply(
+                `Сохранено:\n` +
+                `Систола: ${systolic}\n` +
+                `Диастола: ${diastolic}\n` +
+                `Пульс: ${pulse}`
+            );
+        } catch (error) {
+            console.error('Ошибка сохранения:', error);
+            await ctx.reply(' Не удалось сохранить данные. Попробуйте позже.');
+        }
     } else {
         await ctx.reply(
             'Не удалось распознать три числа.\n' +
