@@ -1,6 +1,6 @@
 import { Telegraf, Context } from "telegraf";
 import { Update } from "telegraf/types";
-import {prisma} from "./db";
+import {prisma} from "../../services/database/db";
 
 export function setupBotCommands(bot: Telegraf<Context<Update>>) {
     bot.start(async (ctx) => {
@@ -12,10 +12,12 @@ export function setupBotCommands(bot: Telegraf<Context<Update>>) {
     bot.command('help', async (ctx) => {
         await ctx.reply(
             ' *Справка*\n\n'  +
+            'Сейчас я смогу:\n' +
+            'Получать ваше давление с помощью текста и фото\n' +
+            'Сохранять их\n' +
             'В будущем я смогу:\n' +
-            '• принимать давление (125 85 70)\n' +
             '• вычислять пульсовое давление, тройное произведение, индекс Кердо\n' +
-            '• сохранять историю и давать рекомендации\n\n'
+            '• давать рекомендации\n\n'
         );
     });
     bot.command('stats', async (ctx) => {

@@ -7,24 +7,25 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  telegramId   BigInt        @unique
-  medication   String?
-  createdAt    DateTime      @default(now())
-  measurements Measurement[]
+    id           Int           @id @default(autoincrement())
+    telegramId   BigInt?       @unique   // ← было Int?, стало BigInt?
+    maxUserId    String?       @unique
+    medication   String?
+    createdAt    DateTime      @default(now())
+    measurements Measurement[]
 }
 
 model Measurement {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  systolic   Int
-  diastolic  Int
-  pulse      Int
-  pd         Int?
-  tp         Float?
-  srad       Float?
-  kerdo      Float?
-  riskZone   String?
-  createdAt  DateTime @default(now())
+    id         Int      @id @default(autoincrement())
+    userId     Int
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    systolic   Int
+    diastolic  Int
+    pulse      Int
+    pd         Int?
+    tp         Float?
+    srad       Float?
+    kerdo      Float?
+    riskZone   String?
+    createdAt  DateTime @default(now())
 }

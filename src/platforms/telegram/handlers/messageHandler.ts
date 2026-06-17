@@ -1,6 +1,6 @@
 import { Context } from 'telegraf';
-import { parseNumbers } from '../utils/parsers';
-import { saveMeasurement } from '../services/measurementService';
+import { parseThreeNumbers } from '../../../core/parsers';
+import { saveMeasurement } from '../../../services/database/measurementService';
 
 export async function messageHandler(ctx: Context) {
     if (!ctx.message || !('text' in ctx.message)) return;
@@ -12,7 +12,7 @@ export async function messageHandler(ctx: Context) {
         return;
     }
 
-    const parsed = parseNumbers(text);
+    const parsed = parseThreeNumbers(text);
     if (!parsed) {
         await ctx.reply(' Отправь три числа: систола диастола пульс, например: 120 80 75');
         return;
@@ -21,7 +21,7 @@ export async function messageHandler(ctx: Context) {
     const { systolic, diastolic, pulse } = parsed;
 
     try {
-        await saveMeasurement(telegramId, systolic, diastolic, pulse);
+        await saveMeasurement('telegram', telegramId, systolic, diastolic, pulse);
         await ctx.reply(
             ` Сохранено: ${systolic}/${diastolic}, пульс ${pulse}`
         );
