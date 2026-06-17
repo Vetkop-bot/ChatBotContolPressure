@@ -1,7 +1,7 @@
 import { Context } from 'telegraf';
-import { parseNumbers } from '../utils/parsers';
-import { saveMeasurement } from '../services/measurementService';
-import { recognizeWithTesseract, preprocessImage } from '../utils/ocr';
+import { parseThreeNumbers } from '../../../core/parsers';
+import { saveMeasurement } from '../../../services/database/measurementService';
+import { recognizeWithTesseract, preprocessImage } from '../../../services/ocr/ocr';
 
 export async function photoHandler(ctx: Context) {
     if (!ctx.message || !('photo' in ctx.message)) return;
@@ -34,7 +34,7 @@ export async function photoHandler(ctx: Context) {
             return;
         }
 
-        const parsed = parseNumbers(text);
+        const parsed = parseThreeNumbers(text);
         if (!parsed) {
             await ctx.reply(
                 ` Не смог извлечь три числа. Распознано: "${text}"\n` +
@@ -45,7 +45,7 @@ export async function photoHandler(ctx: Context) {
 
         const { systolic, diastolic, pulse } = parsed;
 
-        await saveMeasurement(telegramId, systolic, diastolic, pulse);
+        await saveMeasurement('telegram', telegramId, systolic, diastolic, pulse);
 
         await ctx.reply(
             `Распознано и сохранено:\n` +
