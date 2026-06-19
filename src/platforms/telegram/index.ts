@@ -19,7 +19,8 @@ bot.on('text', async (ctx) => {
         }
     }
 
-    const result = await handleMeasurement('telegram', userId, text);if (!result) {
+    const result = await handleMeasurement('telegram', userId, text);
+    if (!result) {
         await ctx.reply(
             'Не удалось распознать три числа.\n' +
             'Пример: 120 80 75'

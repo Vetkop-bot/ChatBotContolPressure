@@ -10,15 +10,20 @@ export async function handleMeasurement(
     if (!parsed) return null;
 
     const { systolic, diastolic, pulse } = parsed;
-    await saveMeasurement(platform, userId, systolic, diastolic, pulse);
+
+    const result = await saveMeasurement(platform, userId, systolic, diastolic, pulse);
+
+    let reply = `Давление: ${systolic}/${diastolic}, пульс: ${pulse}\n`;
+    reply += `ПД: ${result.indices.pd} | `;
+    reply += `ТП: ${result.indices.tp.toFixed(2)} | `;
+    reply += `СрАД: ${result.indices.srad.toFixed(1)} | `;
+    reply += `Кердо: ${result.indices.kerdo.toFixed(1)}\n`;
 
     return {
         systolic,
         diastolic,
         pulse,
-        message: `Сохранено:\n` +
-            `Систола: ${systolic}\n` +
-            `Диастола: ${diastolic}\n` +
-            `Пульс: ${pulse}`
+        indices: result.indices,
+        message: reply
     };
 }
