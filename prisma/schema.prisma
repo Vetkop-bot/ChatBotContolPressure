@@ -7,12 +7,18 @@ datasource db {
 }
 
 model User {
-    id           Int           @id @default(autoincrement())
-    telegramId   BigInt?       @unique   // ← было Int?, стало BigInt?
-    maxUserId    String?       @unique
-    medication   String?
-    createdAt    DateTime      @default(now())
-    measurements Measurement[]
+    id                  Int       @id @default(autoincrement())
+    telegramId          BigInt?   @unique
+    maxUserId           String?   @unique
+    medication          String?
+    targetSystolic      Int?
+    targetDiastolic     Int?
+    notificationsEnabled Boolean   @default(true)
+    notifyOnHigh        Boolean   @default(true)
+    notifyReminder      Boolean   @default(false)
+    reminderTime        String?
+    createdAt           DateTime  @default(now())
+    measurements        Measurement[]
 }
 
 model Measurement {
