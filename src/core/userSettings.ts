@@ -1,9 +1,12 @@
 import { prisma } from '../services/database/db';
 
-export async function getUserSettings(platform: 'telegram' | 'max', userId: string | number | bigint) {
+type Platform = 'telegram' | 'max';
+
+export async function getUserSettings(platform: Platform, userId: string | number | bigint) {
     const where = platform === 'telegram'
         ? { telegramId: userId as number | bigint }
         : { maxUserId: userId as string };
+
     return await prisma.user.findUnique({
         where,
         select: {
@@ -17,7 +20,7 @@ export async function getUserSettings(platform: 'telegram' | 'max', userId: stri
 }
 
 export async function updateUserSettings(
-    platform: 'telegram' | 'max',
+    platform: Platform,
     userId: string | number | bigint,
     data: {
         medication?: string;
@@ -27,16 +30,23 @@ export async function updateUserSettings(
         notifyOnHigh?: boolean;
     }
 ) {
-    const where = platform === 'telegram'
-        ? { telegramId: userId as number | bigint }
-        : { maxUserId: userId as string };
+    let where;
+    if (platform === 'telegram') {
+        where = { telegramId: userId as number | bigint };
+    } else {
+        where = { maxUserId: userId as string };
+    }
+
     let user = await prisma.user.findUnique({ where });
     if (!user) {
-        user = await prisma.user.create({
-            data: platform === 'telegram'
-                ? { telegramId: userId as number | bigint }
-                : { maxUserId: userId as string }
-        });
+        const createData = platform === 'telegram'
+            ? { telegramId: userId as number | bigint }
+            : { maxUserId: userId as string };
+        user = await prisma.user.create({ data: createData });
     }
-    return await prisma.user.update({ where: { id: user.id }, data });
+
+    return await prisma.user.update({
+        where: { id: user.id },
+        data,
+    });
 }
