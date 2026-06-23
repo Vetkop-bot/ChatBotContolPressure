@@ -51,9 +51,9 @@ export function setupBotCommands(bot: Telegraf<Context<Update>>) {
     bot.action('cmd_help', async (ctx) => {
         await ctx.answerCbQuery();
         const keyboard = Markup.inlineKeyboard([
-            [Markup.button.callback('📊 Статистика', 'cmd_stats')],
-            [Markup.button.callback('⚙️ Настройки', 'cmd_settings')],
-            [Markup.button.callback('🔙 Назад', 'cmd_start')]
+            [Markup.button.callback(' Статистика', 'cmd_stats')],
+            [Markup.button.callback(' Настройки', 'cmd_settings')],
+            [Markup.button.callback(' Назад', 'cmd_start')]
         ]);
         const reply = await handleCommand('telegram', ctx.from.id, '/help');
         await ctx.editMessageText(reply || 'Справка по боту.', {
