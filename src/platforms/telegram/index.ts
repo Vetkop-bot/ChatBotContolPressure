@@ -1,8 +1,9 @@
-import { Telegraf } from 'telegraf';
+import { Telegraf, Markup } from 'telegraf';
 import { setupBotCommands } from './bot';
 import { handleCommand } from '../../core/commandHandler';
 import { handleMeasurement } from '../../core/measurementHandler';
 import { recognizeWithTesseract } from '../../services/ocr/ocr';
+import { prisma } from '../../services/database/db';
 
 const token = process.env.BOT_TOKEN;
 if (!token) {
@@ -14,17 +15,40 @@ const bot = new Telegraf(token);
 
 setupBotCommands(bot);
 
+async function handleNewUser(ctx: any) {
+    const userId = ctx.from.id;
+    const user = await prisma.user.findUnique({
+        where: { telegramId: userId }
+    });
+    if (!user) {
+        await prisma.user.create({ data: { telegramId: userId } });
+        const keyboard = Markup.inlineKeyboard([
+            [Markup.button.callback('Статистика', 'cmd_stats')],
+            [Markup.button.callback('Настройки', 'cmd_settings')],
+            [Markup.button.callback('Препарат', 'cmd_medication')],
+            [Markup.button.callback('Помощь', 'cmd_help')],
+        ]);
+        await ctx.reply(
+            'Здравствуйте! Я бот для контроля давления.\n\n' +
+            'Отправьте три числа (систола диастола пульс) через пробел, запятую или слеш.\n' +
+            'Пример: 120 80 75\n\n' +
+            'Также вы можете отправить фото тонометра – я попробую распознать показания.\n\n' +
+            'Используйте кнопки для быстрого доступа:',
+            { reply_markup: keyboard.reply_markup }
+        );
+        return true;
+    }
+    return false;
+}
+
 bot.on('text', async (ctx) => {
     const text = ctx.message.text;
     const userId = ctx.from.id;
 
-    if (text.startsWith('/')) {
-        const reply = await handleCommand('telegram', userId, text);
-        if (reply) {
-            await ctx.reply(reply);
-        }
-        return;
-    }
+    if (text.startsWith('/')) return;
+
+    const isNew = await handleNewUser(ctx);
+    if (isNew) return;
 
     const result = await handleMeasurement('telegram', userId, text);
     if (result) {
@@ -42,6 +66,9 @@ bot.on('text', async (ctx) => {
 bot.on('photo', async (ctx) => {
     const userId = ctx.from.id;
     try {
+        const isNew = await handleNewUser(ctx);
+        if (isNew) return;
+
         await ctx.reply('Распознаю показания...');
 
         const photo = ctx.message.photo[ctx.message.photo.length - 1];
@@ -79,9 +106,22 @@ bot.on('photo', async (ctx) => {
     }
 });
 
-// Запуск бота
-bot.launch().then(() => console.log('Telegram бот запущен'));
+bot.launch()
+    .then(() => {
+        console.log('========================================');
+        console.log('Бот контроля давления успешно запущен!');
+        console.log(`Время запуска: ${new Date().toLocaleString('ru-RU')}`);
+        console.log('Бот готов к работе!');
+        console.log('========================================');
+    })
+    .catch((err) => {
+        console.error('Ошибка при запуске бота:', err.message);
+        if (err.message.includes('409')) {
+            console.error('Конфликт: возможно, бот уже запущен в другом окне.');
+            console.error('Закройте все другие экземпляры бота и попробуйте снова.');
+        }
+        process.exit(1);
+    });
 
-// Обработка завершения
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
