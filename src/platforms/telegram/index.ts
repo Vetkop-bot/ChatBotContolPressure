@@ -1,9 +1,9 @@
 import { Telegraf, Markup } from 'telegraf';
-import { setupBotCommands } from './bot';
-import { handleCommand } from '../../core/commandHandler';
+import { setupBotCommands, pendingConfirmations } from './bot';
 import { handleMeasurement } from '../../core/measurementHandler';
 import { recognizeWithTesseract } from '../../services/ocr/ocr';
 import { prisma } from '../../services/database/db';
+import { parseNumbers } from '../../core/parsers';
 
 const token = process.env.BOT_TOKEN;
 if (!token) {
@@ -87,9 +87,22 @@ bot.on('photo', async (ctx) => {
             return;
         }
 
-        const result = await handleMeasurement('telegram', userId, text);
-        if (result) {
-            await ctx.reply(result.message);
+        const parsed = parseNumbers(text);
+        if (parsed) {
+            pendingConfirmations[userId] = {
+                systolic: parsed.systolic,
+                diastolic: parsed.diastolic,
+                pulse: parsed.pulse
+            };
+            const keyboard = Markup.inlineKeyboard([
+                [Markup.button.callback('Да, всё верно', 'confirm_yes')],
+                [Markup.button.callback('Нет, ввести вручную', 'confirm_no')]
+            ]);
+            await ctx.reply(
+                `Распознаны показания:\nСистола: ${parsed.systolic}\nДиастола: ${parsed.diastolic}\nПульс: ${parsed.pulse}\n\nВсё верно?`,
+                { reply_markup: keyboard.reply_markup }
+            );
+            return;
         } else {
             await ctx.reply(
                 `Распознал текст, но не смог извлечь три числа.\n` +
