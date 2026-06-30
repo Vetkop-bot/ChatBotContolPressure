@@ -30,7 +30,6 @@ export async function handleMeasurement(
         });
     }
 
-    // Зона риска
     const risk = determineRiskZone(
         systolic,
         diastolic,
@@ -39,12 +38,12 @@ export async function handleMeasurement(
         result.indices.srad
     );
 
-    let reply = `Давление: ${systolic}/${diastolic}, пульс: ${pulse}\n`;
-    reply += `ПД: ${result.indices.pd} | `;
-    reply += `ТП: ${result.indices.tp.toFixed(2)} | `;
-    reply += `СрАД: ${result.indices.srad.toFixed(1)} | `;
-    reply += `Кердо: ${result.indices.kerdo.toFixed(1)}\n`;
-    reply += `${risk.message}\n`;
+    let reply = ` Давление: ${systolic}/${diastolic}, пульс: ${pulse}\n`;
+    reply += `Пульсовое давление: ${result.indices.pd}\n`;
+    reply += `Тройное произведение: ${result.indices.tp.toFixed(2)}\n`;
+    reply += `Среднее артериальное давление: ${result.indices.srad.toFixed(1)}\n`;
+    reply += `Индекс Кердо: ${result.indices.kerdo.toFixed(1)}\n`;
+    reply += `Зона риска: ${risk.message}\n`;
 
     if (prev) {
         const diffSys = systolic - prev.systolic;
