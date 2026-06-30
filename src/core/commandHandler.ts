@@ -74,29 +74,5 @@ export async function handleCommand(
         return reply;
     }
 
-    if (command.startsWith('/set_medication')) {
-        const medication = command.replace('/set_medication', '').trim();
-        if (!medication) return 'Укажите название препарата, например: /set_medication Каптоприл 25 мг';
-        await updateUserSettings(platform, userId, { medication });
-        return `Препарат "${medication}" сохранён. Я буду использовать его в напоминаниях.`;
-    }
-
-    if (command.startsWith('/set_norm')) {
-        const parts = command.split(' ');
-        if (parts.length < 3) return 'Укажите систолу и диастолу, например: /set_norm 130 80';
-        const sys = parseInt(parts[1], 10);
-        const dia = parseInt(parts[2], 10);
-        if (isNaN(sys) || isNaN(dia) || sys <= 0 || dia <= 0) return 'Некорректные значения.';
-        await updateUserSettings(platform, userId, { targetSystolic: sys, targetDiastolic: dia });
-        return `Целевое давление установлено: ${sys}/${dia}. Теперь я буду сравнивать с этой нормой.`;
-    }
-
-    if (command.startsWith('/set_notifications')) {
-        const value = command.split(' ')[1];
-        if (value !== 'on' && value !== 'off') return 'Используйте: /set_notifications on или off';
-        await updateUserSettings(platform, userId, { notificationsEnabled: value === 'on' });
-        return `Уведомления ${value === 'on' ? 'включены' : 'отключены'}.`;
-    }
-
     return null;
 }
