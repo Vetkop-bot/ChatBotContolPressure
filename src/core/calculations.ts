@@ -4,25 +4,44 @@ export function calculatePd(systolic: number, diastolic: number): number {
     return systolic - diastolic;
 }
 export function calculateTp(systolic: number, diastolic: number, pulse: number): number {
-    return (systolic * diastolic * pulse) / 1000;
+    return (systolic * pulse) / 100;
 }
 export function calculateSrad(systolic: number, diastolic: number): number {
     return diastolic + (systolic - diastolic) / 3;
 }
 export function calculateKerdo(diastolic: number, pulse: number): number {
     if (pulse === 0) return 0;
-    return (1 - diastolic / pulse) * 100;
+    return (diastolic / pulse) * 100;
 }
 
 export function determineRiskZone(s: number, d: number, pd: number, tp: number, srad: number) {
-    if (tp > 350 || pd > 60) return { message: 'КРАСНЫЙ: высокий риск инфаркта. Нужен врач!', color: 'red' };
-    if (s > 135 || d > 85) return { message: 'Желтый: нагрузка на сосуды', color: 'yellow' };
-    if (srad < 70 && pd < 25) return { message: 'Риск гипотонии / слабости', color: 'blue' };
-    if (s >= 110 && s <= 120 && d >= 70 && d <= 80 && tp < 200) {
-        return { message: 'Зеленый: сердце работает экономно', color: 'green' };
+    if (s >= 180 || d >= 110) {
+        return { message: 'КРАСНЫЙ: гипертонический криз. Немедленно вызывайте скорую!', color: 'red' };
     }
-    return { message: 'Показатели в пределах нормы, но есть небольшие отклонения', color: 'green' };
+
+    if (tp > 350 || pd > 60) {
+        return { message: 'КРАСНЫЙ: высокий риск инфаркта. Нужен врач!', color: 'red' };
+    }
+
+    if (s >= 140 || d >= 90) {
+        return { message: 'ОРАНЖЕВЫЙ: повышенное давление. Примите препарат и отдохните.', color: 'orange' };
+    }
+
+    if (s > 130 || d > 85) {
+        return { message: 'Жёлтый: нагрузка на сосуды. Отдохните и повторите замер.', color: 'yellow' };
+    }
+
+    if (s < 90 || d < 60 || (srad < 70 && pd < 25)) {
+        return { message: 'Синий: низкое давление. Выпейте кофе или сладкий чай.', color: 'blue' };
+    }
+
+    if (s >= 100 && s <= 130 && d >= 60 && d <= 85 && tp >= 150 && tp <= 300) {
+        return { message: 'Зелёный: давление в норме, сердце работает хорошо.', color: 'green' };
+    }
+
+    return { message: 'Зелёный: показатели в пределах нормы.', color: 'green' };
 }
+
 export async function checkAlert(
     userId: number,
     systolic: number,
