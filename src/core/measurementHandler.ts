@@ -1,4 +1,4 @@
-import { parseThreeNumbers } from './parsers';
+import { parseNumbers } from './parsers';
 import { saveMeasurement } from '../services/database/measurementService';
 import { prisma } from '../services/database/db';
 import { determineRiskZone } from './calculations';
@@ -8,7 +8,7 @@ export async function handleMeasurement(
     userId: string | number | bigint,
     text: string
 ) {
-    const parsed = parseThreeNumbers(text);
+    const parsed = parseNumbers(text);
     if (!parsed) return null;
 
     const { systolic, diastolic, pulse } = parsed;

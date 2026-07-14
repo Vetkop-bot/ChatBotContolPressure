@@ -1,7 +1,7 @@
 import { Telegraf, Markup } from 'telegraf';
 import { setupBotCommands, pendingConfirmations } from './bot';
 import { handleMeasurement } from '../../core/measurementHandler';
-import { recognizeWithTesseract } from '../../services/ocr/ocr';
+import { recognizeYoloToText, initYoloModel } from '../../services/ocr/yolo-ocr';
 import { prisma } from '../../services/database/db';
 import { parseNumbers } from '../../core/parsers';
 
@@ -14,7 +14,10 @@ if (!token) {
 const bot = new Telegraf(token);
 
 setupBotCommands(bot);
-
+initYoloModel().catch(err => {
+    console.error(' Не удалось загрузить модель YOLO:', err.message);
+    console.error('   Распознавание фото будет недоступно');
+});
 async function handleNewUser(ctx: any) {
     const userId = ctx.from.id;
     const user = await prisma.user.findUnique({
@@ -76,7 +79,7 @@ bot.on('photo', async (ctx) => {
         const response = await fetch(fileLink.href);
         const buffer = Buffer.from(await response.arrayBuffer());
 
-        const text = await recognizeWithTesseract(buffer);
+        const text = await recognizeYoloToText(buffer);
         console.log('Распознанный текст с фото:', text);
 
         if (!text) {
