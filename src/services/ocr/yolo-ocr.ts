@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import { postprocessYoloOutput, groupDigitsToNumbers } from './yolo-postprocess';
 import { validateAndCorrect } from './yolo-validator';
 
-const DETECTOR_PATH = path.join(__dirname, '../../../models/bestlatest.onnx');
+const DETECTOR_PATH = path.join(__dirname, '../../../models/detector.onnx');
 
 let detectorSession: ort.InferenceSession | null = null;
 
@@ -13,8 +13,6 @@ export async function initYoloModel(): Promise<void> {
     if (!fs.existsSync(DETECTOR_PATH)) {
         throw new Error(`Детектор не найден: ${DETECTOR_PATH}`);
     }
-
-    console.log(' Загрузка модели YOLO детектора...');
 
     detectorSession = await ort.InferenceSession.create(DETECTOR_PATH, {
         executionProviders: ['cpu'],
@@ -24,6 +22,42 @@ export async function initYoloModel(): Promise<void> {
     console.log(' Детектор загружен');
     console.log(`   Входы: ${detectorSession.inputNames.join(', ')}`);
     console.log(`   Выходы: ${detectorSession.outputNames.join(', ')}`);
+}
+
+async function preprocessImage(
+    imageBuffer: Buffer,
+    targetSize: number = 640
+): Promise<{ inputTensor: ort.Tensor; scale: number }> {
+    const metadata = await sharp(imageBuffer).metadata();
+    const origWidth = metadata.width || targetSize;
+    const scale = origWidth / targetSize;
+
+    const enhanced = await sharp(imageBuffer)
+        .grayscale()
+        .modulate({ brightness: 1.2 })
+        .gamma(1.4)
+        .sharpen({ sigma: 2 })
+        .resize(targetSize, targetSize, {
+            fit: 'fill',
+            kernel: sharp.kernel.lanczos3
+        })
+        .raw()
+        .toBuffer();
+
+    const float32Data = new Float32Array(3 * targetSize * targetSize);
+    const numPixels = targetSize * targetSize;
+
+    for (let i = 0; i < numPixels; i++) {
+        const normalized = enhanced[i] / 255.0;
+        float32Data[i] = normalized;
+        float32Data[i + numPixels] = normalized;
+        float32Data[i + numPixels * 2] = normalized;
+    }
+
+    return {
+        inputTensor: new ort.Tensor('float32', float32Data, [1, 3, targetSize, targetSize]),
+        scale
+    };
 }
 
 export async function recognizeWithYolo(
@@ -39,27 +73,8 @@ export async function recognizeWithYolo(
 
     try {
         const startTime = Date.now();
+        const { inputTensor, scale } = await preprocessImage(imageBuffer, 640);
 
-        const metadata = await sharp(imageBuffer).metadata();
-        const origWidth = metadata.width || 640;
-        const origHeight = metadata.height || 640;
-
-        const processed = await sharp(imageBuffer)
-            .resize(640, 640, { fit: 'fill' })
-            .removeAlpha()
-            .raw()
-            .toBuffer();
-
-        const float32Data = new Float32Array(3 * 640 * 640);
-        const numPixels = 640 * 640;
-
-        for (let i = 0; i < numPixels; i++) {
-            float32Data[i] = processed[i * 3] / 255.0;
-            float32Data[i + numPixels] = processed[i * 3 + 1] / 255.0;
-            float32Data[i + numPixels * 2] = processed[i * 3 + 2] / 255.0;
-        }
-
-        const inputTensor = new ort.Tensor('float32', float32Data, [1, 3, 640, 640]);
         const feeds: Record<string, ort.Tensor> = {};
         feeds[detectorSession.inputNames[0]] = inputTensor;
 
@@ -71,11 +86,27 @@ export async function recognizeWithYolo(
             11,
             0.5,
             0.5,
-            origWidth,
-            origHeight
+            640 / scale,
+            640 / scale
         );
 
         console.log(` Найдено ${detections.length} цифр`);
+
+        const hasDigit1 = detections.some(d => d.classId === 1);
+        if (!hasDigit1) {
+            console.log('Цифра "1" не найдена, дополнительный поиск с порогом 0.15...');
+            const detectionsClass1 = postprocessYoloOutput(
+                outputData,
+                11,
+                0.15,
+                0.5,
+                640 / scale,
+                640 / scale,
+                1
+            );
+            detections.push(...detectionsClass1);
+            console.log(`Добавлено ${detectionsClass1.length} детекций "1"`);
+        }
 
         if (detections.length === 0) {
             return null;
@@ -85,7 +116,7 @@ export async function recognizeWithYolo(
             console.log(`  Цифра ${det.className} (класс ${det.classId}, ${(det.confidence * 100).toFixed(1)}%) at (${det.x1.toFixed(0)}, ${det.y1.toFixed(0)})`);
         }
 
-        const grouped = groupDigitsToNumbers(detections, origHeight, origWidth);
+        const grouped = groupDigitsToNumbers(detections, 640 / scale, 640 / scale);
         console.log(' Сгруппировано:', grouped);
 
         const elapsed = Date.now() - startTime;
